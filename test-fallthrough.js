@@ -1,6 +1,6 @@
 "use strict";
 
-const tiptoe = require("./index");
+var tiptoe = require("./index");
 
 tiptoe(
 	function step1()

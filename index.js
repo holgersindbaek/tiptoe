@@ -1,15 +1,12 @@
 "use strict";
-/* eslint-disable no-var, prefer-rest-params, init-declarations, unicorn/prefer-negative-index, prefer-spread, vars-on-top, no-throw-literal, unicorn/prefer-reflect-apply */
 
-// Original inspiration: https://github.com/creationix/step
+// Mostly copied from creatix step (https://github.com/creationix/step)
 function tiptoe()
 {
-	var originError = new Error();	// eslint-disable-line unicorn/error-message
 	var steps = Array.prototype.slice.call(arguments),
-		pending, counter, results, lock, captureErrors, curStep, lastStep;
+		pending, counter, results, lock, captureErrors;
 
 	// Define the main callback that's given as 'this' to the steps.
-	// Make sure I never "return" any thing from this function here in tiptoe as that would mess all sorts of stuff up when folks call return this();
 	function next()
 	{
 		var args = Array.prototype.slice.call(arguments);
@@ -21,7 +18,7 @@ function tiptoe()
 		{
 			// Throw errors
 			if(args[0])
-				throw {err : args[0], origin : originError, curLoc : new Error("tiptoe uncaught error at final step")};
+				throw args[0];
 
 			return;
 		}
@@ -30,31 +27,15 @@ function tiptoe()
 		if(!captureErrors)
 		{
 			if(args[0])
-			{
-				// Let's embed some helpful meta info about where this error took place into the error arg. Don't do this when capturing errors, because then they are expected and we don't want to pollute it
-				if(typeof args[0]==="object")
-				{
-					args[0]._tiptoeRemainingSteps = steps.map(step => step.name);
-					args[0]._tiptoeOrigin = originError;
-					//args[0]._tiptoeLoc = new Error();
-				}
 				steps = steps.slice(steps.length-1);
-			}
 			else if(steps.length>1)
-			{
 				args = args.slice(1);
-			}
 		}
 
 		captureErrors = false;
 
 		// Get the next step to execute
-		if(curStep)
-			lastStep = curStep;
-		curStep = steps.shift();
-		if(!curStep)
-			throw new Error(`noCurStep [${curStep}] at origin: ${originError.message}`);
-		
+		var nextStep = steps.shift();
 		results = [];
 
 		var result;
@@ -64,14 +45,12 @@ function tiptoe()
 		{
 			lock = true;
 			captureErrors = false;
-			result = curStep.apply(next, args);
+			result = nextStep.apply(next, args);
 		}
-		catch(err)
+		catch(e)
 		{
 			// Pass any exceptions on through the next callback
-			next(err);
-
-			// WARNING: What about the rest of the code after this catch? Am I not calling next() twice? test-error-capture.js seems to show things are ok?
+			next(e);
 		}
 
 		if(counter>0 && pending===0)
@@ -89,21 +68,19 @@ function tiptoe()
 	}
 
 	// Add a special callback generator 'this.parallel()' that groups stuff.
-	next.parallel = function parallel(noerrarg)
-	{
+	next.parallel = function() {
 		var index = 1 + counter++;
 		pending++;
 
-		return function parallelReturn()
-		{
+		return function() {
 			pending--;
 
 			// Compress the error from any result to the first argument
-			if(!noerrarg && arguments[0])
+			if(arguments[0])
 				results[0] = arguments[0];
 
 			// Send the other results as arguments
-			results[index] = arguments.length>(noerrarg ? 1 : 2) ? Array.prototype.slice.call(arguments, (noerrarg ? 0 : 1)) : arguments[(noerrarg ? 0 : 1)];
+			results[index] = arguments.length>2 ? Array.prototype.slice.call(arguments, 1) : arguments[1];
 
 			// When all parallel branches are done, call the callback
 			if(!lock && pending===0)
@@ -111,37 +88,18 @@ function tiptoe()
 		};
 	};
 
-	next.capture = function capture()
-	{
+	next.capture = function() {
 		captureErrors = true;
 	};
 
 	next.data = {};
 
-	next.exit = function exit()
-	{
+	next.exit = function() {
 		steps = [];
 	};
 
-	next.finish = function finish()
-	{
+	next.finish = function() {
 		steps = steps.slice(steps.length-1);
-		next.apply(null, arguments);
-	};
-
-	// Will jump to a given step offset. Use negative numbers to jump backwards from the last step
-	next.jump = function jump(offset)
-	{
-		if(offset===0)
-			throw new Error(`Invalid tiptoe.jump(offset) of: ${offset}`);
-			
-		steps = steps.slice(offset>0 ? offset-1 : offset+-1);
-		next.apply(null, Array.prototype.slice.call(arguments, 1));
-	};
-
-	next.back = function back()
-	{
-		steps = [lastStep, curStep, ...steps];
 		next.apply(null, arguments);
 	};
 

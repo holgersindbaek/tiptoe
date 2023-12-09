@@ -1,6 +1,6 @@
 "use strict";
 
-const tiptoe = require("./index");
+var tiptoe = require("./index");
 
 tiptoe(
 	function step1()
@@ -11,7 +11,10 @@ tiptoe(
 	{
 		console.log(a);
 
-		["b", "c", "d"].forEach(letter => this.parallel()(letter==="c" ? "b" : null, letter));
+		["b", "c", "d"].forEach(function(letter)
+		{
+			this.parallel()(letter==="c" ? "b" : null, letter);
+		}.bind(this));
 	},
 	function step3()
 	{
@@ -21,7 +24,7 @@ tiptoe(
 	{
 		if(err)
 		{
-			console.log(err);
+			console.error(err);
 			console.log("c");
 			process.exit(1);
 		}

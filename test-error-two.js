@@ -1,6 +1,6 @@
 "use strict";
 
-const tiptoe = require("./index");
+var tiptoe = require("./index");
 
 tiptoe(
 	function step1()
@@ -11,7 +11,7 @@ tiptoe(
 	{
 		console.log(a);
 
-		process.nextTick(function doOnNextTick() { this("b"); }.bind(this));
+		process.nextTick(function() { this("b"); }.bind(this));
 	},
 	function step3()
 	{
@@ -21,7 +21,7 @@ tiptoe(
 	{
 		if(err)
 		{
-			console.log(err);
+			console.error(err);
 			console.log("c");
 			process.exit(1);
 		}
